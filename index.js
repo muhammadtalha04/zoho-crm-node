@@ -6,18 +6,12 @@ const request = require('request');
 const PORT = 3000;
 
 app.use(cors());
-// app.use((req, res, next) => {
-// 	res.append('Authorization', 'Zoho-oauthtoken 1000.51c2a4b7589aacd739c5116d342a229c.f1884131907c1ec2ee71a57ef2845a68');
-// 	next();
-// });
 
 app.get('/', (req, res) => {
 	var api_url = "https://www.zohoapis.com/crm/v2/settings/modules";
 	var headers = {
 		'Authorization': 'Zoho-oauthtoken 1000.51c2a4b7589aacd739c5116d342a229c.f1884131907c1ec2ee71a57ef2845a68'
 	};
-
-	// req.pipe(request(url)).pipe(res);
 
 	request.get({url:api_url, headers: headers}, (error, response, body) => {
 		res.send(body);
