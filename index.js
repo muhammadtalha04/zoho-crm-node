@@ -6,8 +6,7 @@ const { head } = require('request');
 const { response } = require('express');
 
 const PORT = 3000;
-let newLeadId = "";
-const accessToken = "1000.f129470a547e35f060436841d40e1015.dbbfaf4e3bf99d87e8796d72d5bbcc26";
+const accessToken = "1000.9abce73fc54cf06c2577ea2c905898cc.2b04145963aea085e7da82a21eec43f7";
 
 app.use(cors());
 
@@ -41,27 +40,13 @@ app.get('/lead/create', (req, res) => {
 	var headers = {
 		'Authorization': 'Zoho-oauthtoken ' + accessToken
 	};
-	var bodyData = {
-		"data": [
-			{
-				"Company": "E-Corp",
-				"Last_Name": "Elliot",
-				"First_Name": "",
-				"Email": "example@test.com",
-			}
-		],
-		"trigger": [
-			"approval",
-			"workflow",
-			"blueprint"
-		]
-	};
+	var bodyData = require('./resources/lead-data');
 
 	request.post({ url: url, headers: headers, body: bodyData, json: true }, (error, response, body) => {
 		if (response && response["statusCode"] == 201) {
 			if (response["body"]["data"].length > 0) {
 				if (response["body"]["data"][0]["code"] == "SUCCESS") {
-					newLeadId = response["body"]["data"][0]["details"]["id"];
+					var newLeadId = response["body"]["data"][0]["details"]["id"];
 
 					res.send("Lead Created Successfully. <a href='http://127.0.0.1:3000/lead/" + newLeadId + "/convert/'>Convert Lead</a>");
 				}
@@ -87,22 +72,127 @@ app.get('/lead/:id/convert', (req, res) => {
 	const headers = {
 		'Authorization': 'Zoho-oauthtoken ' + accessToken
 	};
-	const bodyData = {
+
+	let bodyData = {
 		"data": [
 			{
 				"overwrite": false,
 				"notify_lead_owner": true,
 				"notify_new_entity_owner": true,
-				// "Accounts": "4000000373187",
-				// "Contacts": "4000000372131",
-				"assign_to": "721176428",
+				"assign_to": "",
 			}
 		]
 	};
 
-	request.post({ url: url, headers: headers }, (error, response, body) => {
-		res.send("<h2>Response</h2><br>" + response);
-		res.send("<br><hr><br><h2>Body</h2><br>" + body);
+	request.get("http://127.0.0.1:3000/user/all", (error, response, body) => {
+		if (response && response["statusCode"] == 200) {
+			let resData = response["body"];
+			resData = JSON.parse(resData);
+
+			if (resData["code"] == 1) {
+				const userId = resData["data"]["id"];
+
+				bodyData.data[0].assign_to = userId;
+
+				convert();
+
+				function convert() {
+					request.post({ url: url, headers: headers, body: bodyData, json: true }, convertResponse);
+				}
+
+				function convertResponse(error1, response1, body1) {
+					if (response1["statusCode"] && response1["statusCode"] == 202) {
+						if (response1["body"]["data"][0]["code"] == "DUPLICATE_DATA") {
+							let convRes = response1["body"]["data"][0];
+
+							if (convRes["details"]["module"] == "Contacts") {
+								bodyData.data[0]["Contacts"] = convRes["details"]["id"];
+
+								convert();
+							}
+							else {
+								res.send(convRes["details"]);
+							}
+						}
+						else {
+							res.send(response1);
+						}
+					}
+					else if (response1["statusCode"] && response1["statusCode"] == 200) {
+						var html = JSON.stringify(response1["body"]["data"][0]) +
+							"<br><br><br><a href='http://127.0.0.1:3000/account/" + response1["body"]["data"][0]["Accounts"] + "'>Find Account</a>";
+
+						res.send(html);
+					}
+					else {
+						res.send(response1);
+					}
+				}
+
+
+			} else if (resData["code"] == 0) {
+				res.send(resData["message"]);
+			}
+		} else {
+			res.send("Error" + response["statusCode"]);
+		}
+	});
+});
+
+//GET ACCOUNT
+app.get('/account/:id', (req, res) => {
+	const url = "https://www.zohoapis.com/crm/v2/Accounts/" + req.params.id;
+	const headers = {
+		'Authorization': 'Zoho-oauthtoken ' + accessToken
+	};
+
+	request.get({ url: url, headers: headers }, (error, response, body) => {
+		if (response["statusCode"] == 200) {
+			var bd = JSON.parse(body);
+			res.send("<pre><code>" + JSON.stringify(bd["data"][0], null, 4) + "</code></pre>");
+		}
+		else {
+			res.send(response);
+		}
+	});
+});
+
+//GET ALL USERS
+app.get('/user/all', (req, res) => {
+	const url = "https://www.zohoapis.com/crm/v2/users";
+	const headers = {
+		'Authorization': 'Zoho-oauthtoken ' + accessToken
+	};
+
+	request.get({ url: url, headers: headers }, (error, response, body) => {
+		let resp = {};
+
+		if (response && response["statusCode"] == 200) {
+			let users = response["body"];
+			if (typeof users == "string") {
+				users = JSON.parse(users);
+			}
+
+			if (users["users"].length > 0) {
+				resp = {
+					"code": 1,
+					"message": users["users"].length + " users found.",
+					"data": {
+						"id": users["users"][0]["id"]
+					}
+				};
+			} else {
+				resp = {
+					"code": 0,
+					"message": "No users found. Create users first."
+				};
+			}
+
+			res.send(JSON.stringify(resp));
+		}
+		else {
+			res.send({ "code": 0, "message": "Error getting users." });
+		}
 	});
 });
 
