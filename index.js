@@ -6,20 +6,14 @@ const { head } = require('request');
 const { response } = require('express');
 
 const PORT = 3000;
-const accessToken = "1000.9abce73fc54cf06c2577ea2c905898cc.2b04145963aea085e7da82a21eec43f7";
+let accessToken = "1000.9abce73fc54cf06c2577ea2c905898cc.2b04145963aea085e7da82a21eec43f7";
+const credentials = require('./resources/client_credentials');
 
 app.use(cors());
 
 //HOME PAGE
 app.get('/', (req, res) => {
-	var api_url = "https://www.zohoapis.com/crm/v2/settings/modules";
-	var headers = {
-		'Authorization': 'Zoho-oauthtoken ' + accessToken
-	};
-
-	request.get({ url: api_url, headers: headers }, (error, response, body) => {
-		res.send(body);
-	});
+	res.redirect('http://127.0.0.1:' + PORT + '/generate-code');
 });
 
 //ALL LEADS
@@ -48,7 +42,7 @@ app.get('/lead/create', (req, res) => {
 				if (response["body"]["data"][0]["code"] == "SUCCESS") {
 					var newLeadId = response["body"]["data"][0]["details"]["id"];
 
-					res.send("Lead Created Successfully. <a href='http://127.0.0.1:3000/lead/" + newLeadId + "/convert/'>Convert Lead</a>");
+					res.send("Lead Created Successfully. <a href='http://127.0.0.1:" + PORT + "/lead/" + newLeadId + "/convert/'>Convert Lead</a>");
 				}
 				else {
 					res.send("Error creating Lead");
@@ -84,7 +78,7 @@ app.get('/lead/:id/convert', (req, res) => {
 		]
 	};
 
-	request.get("http://127.0.0.1:3000/user/all", (error, response, body) => {
+	request.get("http://127.0.0.1:" + PORT + "/user/all", (error, response, body) => {
 		if (response && response["statusCode"] == 200) {
 			let resData = response["body"];
 			resData = JSON.parse(resData);
@@ -120,7 +114,7 @@ app.get('/lead/:id/convert', (req, res) => {
 					}
 					else if (response1["statusCode"] && response1["statusCode"] == 200) {
 						var html = JSON.stringify(response1["body"]["data"][0]) +
-							"<br><br><br><a href='http://127.0.0.1:3000/account/" + response1["body"]["data"][0]["Accounts"] + "'>Find Account</a>";
+							"<br><br><br><a href='http://127.0.0.1:" + PORT + "/account/" + response1["body"]["data"][0]["Accounts"] + "'>Find Account</a>";
 
 						res.send(html);
 					}
@@ -197,21 +191,44 @@ app.get('/user/all', (req, res) => {
 });
 
 //GET ACCESS TOKEN
-app.get('/token', (req, res) => {
+app.get('/auth/callback', (req, res) => {
+	const grantCode = req.query.code;
 	var url = "https://accounts.zoho.com/oauth/v2/token";
 	const bodyData = {
 		'grant_type': 'authorization_code',
-		'client_id': '1000.W7T2T4V4JLKCFRVWVZB9U4MVNPL4PB',
-		'client_secret': '394a90c7aca362921485bcdf7df00aa64cf95e1b7c',
-		'redirect_uri': 'https://www.getpostman.com/oauth2/callback',
-		'code': '1000.11d60444df9ecae608ce12d901660e2b.699b1f74573898f4ea8aa86ec79a8443'
+		'client_id': credentials["client_id"],
+		'client_secret': credentials["client_secret"],
+		'redirect_uri': credentials["redirect_uri"],
+		'code': grantCode
 	};
 
-	request.post({ url: "https://accounts.zoho.com/oauth/v2/token", body: bodyData, json: true }, (error, response, body) => {
-		// res.set(err);
-		res.send(response);
-		console.log(body);
+	request.post({ url: url, formData: bodyData }, (error, response, body) => {
+		if (response["statusCode"] == 200) {
+			var resBody = JSON.parse(body);
+
+			if (resBody["access_token"]) {
+				accessToken = resBody["access_token"];
+
+				console.log('Access Token: ' + accessToken);
+				res.send("<a href='http://127.0.0.1:" + PORT + "/lead/create'>Create Lead</a>");
+			}
+			else {
+				res.send("Error: " + resBody["error"]);
+			}
+		}
 	});
+});
+
+app.get('/generate-code', (req, res) => {
+	var url = "https://accounts.zoho.com/oauth/v2/auth?response_type=code&scope=" + credentials["scope"] + "&client_id=" + credentials["client_id"] + "&redirect_uri=" + credentials["redirect_uri"];
+
+	res.redirect(url);
+});
+
+app.get('/auth/callback', (req, res) => {
+
+
+	res.redirect('http://127.0.0.1:' + PORT + '/token/' + grantCode);
 });
 
 app.listen(PORT, () => console.log(`Express server currently running on port http://127.0.0.1:${PORT}`));
