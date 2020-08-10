@@ -41,8 +41,8 @@ app.get('/lead/create', (req, res) => {
 			if (response["body"]["data"].length > 0) {
 				if (response["body"]["data"][0]["code"] == "SUCCESS") {
 					var newLeadId = response["body"]["data"][0]["details"]["id"];
-
-					res.send("Lead Created Successfully. <a href='http://127.0.0.1:" + PORT + "/lead/" + newLeadId + "/convert/'>Convert Lead</a>");
+					res.redirect('http://127.0.0.1:' + PORT + "/lead/" + newLeadId + '/convert/');				
+					//.send("Lead Created Successfully. <a href='http://127.0.0.1:" + PORT + "/lead/" + newLeadId + "/convert/'>Convert Lead</a>");
 				}
 				else {
 					res.send("Error creating Lead");
@@ -117,6 +117,7 @@ app.get('/lead/:id/convert', (req, res) => {
 							"<br><br><br><a href='http://127.0.0.1:" + PORT + "/account/" + response1["body"]["data"][0]["Accounts"] + "'>Find Account</a>";
 
 						res.send(html);
+						
 					}
 					else {
 						res.send(response1);
@@ -210,7 +211,8 @@ app.get('/auth/callback', (req, res) => {
 				accessToken = resBody["access_token"];
 
 				console.log('Access Token: ' + accessToken);
-				res.send("<a href='http://127.0.0.1:" + PORT + "/lead/create'>Create Lead</a>");
+				res.redirect('http://127.0.0.1:' + PORT + '/lead/create');
+				//res.send("<a href='http://127.0.0.1:" + PORT + "/lead/create'>Create Lead</a>");
 			}
 			else {
 				res.send("Error: " + resBody["error"]);
