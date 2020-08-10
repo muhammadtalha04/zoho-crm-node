@@ -2,17 +2,21 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 const request = require('request');
-const { head } = require('request');
-const { response } = require('express');
+// const { head } = require('request');
+// const { response } = require('express');
 
 const PORT = 3000;
 let accessToken = "1000.9abce73fc54cf06c2577ea2c905898cc.2b04145963aea085e7da82a21eec43f7";
 const credentials = require('./resources/client_credentials');
+const { Assert } = require('zombie');
+// const task = require('./automate');
 
 app.use(cors());
+// task.startProcess(PORT);
 
 //HOME PAGE
 app.get('/', (req, res) => {
+	// task.clickAccept();
 	res.redirect('http://127.0.0.1:' + PORT + '/generate-code');
 });
 
@@ -41,7 +45,7 @@ app.get('/lead/create', (req, res) => {
 			if (response["body"]["data"].length > 0) {
 				if (response["body"]["data"][0]["code"] == "SUCCESS") {
 					var newLeadId = response["body"]["data"][0]["details"]["id"];
-					res.redirect('http://127.0.0.1:' + PORT + "/lead/" + newLeadId + '/convert/');				
+					res.redirect('http://127.0.0.1:' + PORT + "/lead/" + newLeadId + '/convert/');
 					//.send("Lead Created Successfully. <a href='http://127.0.0.1:" + PORT + "/lead/" + newLeadId + "/convert/'>Convert Lead</a>");
 				}
 				else {
@@ -117,7 +121,7 @@ app.get('/lead/:id/convert', (req, res) => {
 							"<br><br><br><a href='http://127.0.0.1:" + PORT + "/account/" + response1["body"]["data"][0]["Accounts"] + "'>Find Account</a>";
 
 						res.send(html);
-						
+
 					}
 					else {
 						res.send(response1);
@@ -209,6 +213,7 @@ app.get('/auth/callback', (req, res) => {
 
 			if (resBody["access_token"]) {
 				accessToken = resBody["access_token"];
+				// task.clickAccept("off");
 
 				console.log('Access Token: ' + accessToken);
 				res.redirect('http://127.0.0.1:' + PORT + '/lead/create');
@@ -221,16 +226,11 @@ app.get('/auth/callback', (req, res) => {
 	});
 });
 
+//GRANT TOKEN
 app.get('/generate-code', (req, res) => {
 	var url = "https://accounts.zoho.com/oauth/v2/auth?response_type=code&scope=" + credentials["scope"] + "&client_id=" + credentials["client_id"] + "&redirect_uri=" + credentials["redirect_uri"];
 
 	res.redirect(url);
-});
-
-app.get('/auth/callback', (req, res) => {
-
-
-	res.redirect('http://127.0.0.1:' + PORT + '/token/' + grantCode);
 });
 
 app.listen(PORT, () => console.log(`Express server currently running on port http://127.0.0.1:${PORT}`));
