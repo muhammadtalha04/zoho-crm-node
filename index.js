@@ -2,21 +2,18 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 const request = require('request');
-// const { head } = require('request');
-// const { response } = require('express');
 
 const PORT = 3000;
 let accessToken = "1000.9abce73fc54cf06c2577ea2c905898cc.2b04145963aea085e7da82a21eec43f7";
 const credentials = require('./resources/client_credentials');
 const { Assert } = require('zombie');
-// const task = require('./automate');
+const task = require('./automate');
 
 app.use(cors());
-// task.startProcess(PORT);
+task.startApp(PORT);
 
 //HOME PAGE
 app.get('/', (req, res) => {
-	// task.clickAccept();
 	res.redirect('http://127.0.0.1:' + PORT + '/generate-code');
 });
 
@@ -213,7 +210,6 @@ app.get('/auth/callback', (req, res) => {
 
 			if (resBody["access_token"]) {
 				accessToken = resBody["access_token"];
-				// task.clickAccept("off");
 
 				console.log('Access Token: ' + accessToken);
 				res.redirect('http://127.0.0.1:' + PORT + '/lead/create');
