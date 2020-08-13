@@ -4,12 +4,13 @@ const cors = require('cors');
 const request = require('request');
 
 const PORT = 3000;
-let accessToken = "1000.9abce73fc54cf06c2577ea2c905898cc.2b04145963aea085e7da82a21eec43f7";
+let accessToken = "";
+
 const credentials = require('./resources/client_credentials');
-const { Assert } = require('zombie');
 const task = require('./automate');
 
 app.use(cors());
+
 task.startApp(PORT);
 
 //HOME PAGE
@@ -42,7 +43,7 @@ app.get('/lead/create', (req, res) => {
 			if (response["body"]["data"].length > 0) {
 				if (response["body"]["data"][0]["code"] == "SUCCESS") {
 					var newLeadId = response["body"]["data"][0]["details"]["id"];
-					res.redirect('http://127.0.0.1:' + PORT + "/lead/" + newLeadId + '/convert/');
+					res.redirect('http://127.0.0.1:' + PORT + "/lead/" + newLeadId + '/convert/');				
 					//.send("Lead Created Successfully. <a href='http://127.0.0.1:" + PORT + "/lead/" + newLeadId + "/convert/'>Convert Lead</a>");
 				}
 				else {
@@ -116,9 +117,8 @@ app.get('/lead/:id/convert', (req, res) => {
 					else if (response1["statusCode"] && response1["statusCode"] == 200) {
 						var html = JSON.stringify(response1["body"]["data"][0]) +
 							"<br><br><br><a href='http://127.0.0.1:" + PORT + "/account/" + response1["body"]["data"][0]["Accounts"] + "'>Find Account</a>";
-
+							console.log('Every thing done')
 						res.send(html);
-
 					}
 					else {
 						res.send(response1);
@@ -222,11 +222,45 @@ app.get('/auth/callback', (req, res) => {
 	});
 });
 
-//GRANT TOKEN
 app.get('/generate-code', (req, res) => {
 	var url = "https://accounts.zoho.com/oauth/v2/auth?response_type=code&scope=" + credentials["scope"] + "&client_id=" + credentials["client_id"] + "&redirect_uri=" + credentials["redirect_uri"];
 
-	res.redirect(url);
+	const puppeteer = require('puppeteer');
+
+	(async (response) => {
+	  const browser = await puppeteer.launch();
+	  const page = await browser.newPage();
+	  await page.goto(url);
+	  await page.type('#login_id', credentials.email)
+	  await page.click('#nextbtn')
+	  await page.waitForSelector('#password')
+	  // console.log('1')
+	  // await page.screenshot({ path: 'screenshot1.png' })
+	  await page.type('#password', credentials.password)
+
+	  // await page.screenshot({ path: 'screenshot111.png' })
+	  await page.click('#nextbtn > span')
+	  // console.log('2')
+	  // await page.screenshot({ path: 'screenshot2.png' })
+	  await page.waitForSelector('#Approve_Reject')
+	  // await page.screenshot({ path: 'screenshot11.png' })
+	  await page.click('.btn')
+	  // console.log('3')
+	  // await page.screenshot({ path: 'screenshot.png' })
+	  
+	})();
+
+	//res.redirect(url);
+});
+
+app.get('/auth/callback', (req, res) => {
+
+
+	res.redirect('http://127.0.0.1:' + PORT + '/token/' + grantCode);
 });
 
 app.listen(PORT, () => console.log(`Express server currently running on port http://127.0.0.1:${PORT}`));
+
+
+
+
